@@ -795,8 +795,15 @@ static NTSTATUS steamclient_init( Params *params, bool wow64 )
     LOAD_FUNC( Steam_GetAPICallResult );
     LOAD_FUNC( Steam_FreeLastCallback );
     LOAD_FUNC( Steam_ReleaseThreadLocalMemory );
-    LOAD_FUNC( Steam_IsKnownInterface );
-    LOAD_FUNC( Steam_NotifyMissingInterface );
+
+    /* not exported by the macOS steamclient.dylib */
+#define LOAD_FUNC_OPTIONAL( x )                                \
+    if (!(p_##x = (decltype(p_##x))dlsym( steamclient, #x )))  \
+        WARN( #x " not found in host steamclient\n" );
+
+    LOAD_FUNC_OPTIONAL( Steam_IsKnownInterface );
+    LOAD_FUNC_OPTIONAL( Steam_NotifyMissingInterface );
+#undef LOAD_FUNC_OPTIONAL
 
     TRACE( "Loaded host steamclient from %s\n", debugstr_a(path) );
     return 0;
@@ -851,14 +858,14 @@ static NTSTATUS steamclient_Steam_ReleaseThreadLocalMemory( Params *params, bool
 template< typename Params >
 static NTSTATUS steamclient_Steam_IsKnownInterface( Params *params, bool wow64 )
 {
-    params->_ret = p_Steam_IsKnownInterface( params->version );
+    params->_ret = p_Steam_IsKnownInterface ? p_Steam_IsKnownInterface( params->version ) : true;
     return 0;
 }
 
 template< typename Params >
 static NTSTATUS steamclient_Steam_NotifyMissingInterface( Params *params, bool wow64 )
 {
-    p_Steam_NotifyMissingInterface( params->pipe, params->version );
+    if (p_Steam_NotifyMissingInterface) p_Steam_NotifyMissingInterface( params->pipe, params->version );
     return 0;
 }
 
