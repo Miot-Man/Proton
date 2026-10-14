@@ -4,6 +4,12 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+/* libc++ headers pull in <wchar.h>, which must come before winbase.h's wcsncpy macro */
+#include <array>
+#include <cwchar>
+#endif /* __cplusplus */
+
 #include <windef.h>
 #include <winbase.h>
 
