@@ -153,12 +153,22 @@ static void *get_mem_from_steamclient_dll(size_t size, unsigned int version, voi
         static const WCHAR steamclientW[] = {'s','t','e','a','m','c','l','i','e','n','t','.','d','l','l',0};
         const IMAGE_SECTION_HEADER *sec;
         const IMAGE_NT_HEADERS *nt;
-        HMODULE mod;
+        HMODULE mod, self = NULL;
 
         if (!(mod = GetModuleHandleW(steamclientW)))
         {
             /* That is steamclient64.dll for x64 but no known use cases on x64.*/
             WARN("Module not found, err %lu.\n", GetLastError());
+            alloc_base = error_ptr;
+            return NULL;
+        }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (const WCHAR *)get_mem_from_steamclient_dll, &self);
+        if (mod == self)
+        {
+            /* Without the Windows steamclient.dll (e.g. on macOS) we may be loaded as steamclient.dll
+             * ourselves; don't hand out our own .data section. */
+            WARN("steamclient.dll is lsteamclient itself.\n");
             alloc_base = error_ptr;
             return NULL;
         }
